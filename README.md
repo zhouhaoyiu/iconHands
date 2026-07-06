@@ -3,6 +3,8 @@
 参考 [IconBreeze](https://github.com/yellowplushq/IconBreeze) 的圆角矩形图标漂浮效果做的 Web 版：
 用摄像头检测手掌（不展示画面），**掌心面向屏幕时图标向手掌聚集，手掌消失时图标带物理效果落下**。
 
+**线上地址**：https://icon-hands.yellowplus.workers.dev
+
 ## 运行
 
 ```bash
@@ -11,6 +13,15 @@ npm run dev
 ```
 
 打开 http://localhost:5173 并允许使用摄像头。
+
+## 部署
+
+Cloudflare Workers 静态资源（配置见 `wrangler.jsonc`）：
+
+```bash
+npm run build
+npx wrangler deploy
+```
 
 ## 玩法
 
