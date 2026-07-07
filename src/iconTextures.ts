@@ -30,6 +30,22 @@ function roundedRect(
   ctx.roundRect(x, y, w, h, r);
 }
 
+function fillCenteredGlyph(
+  ctx: CanvasRenderingContext2D,
+  glyph: string,
+  cx: number,
+  cy: number,
+  fontSize: number
+) {
+  ctx.font = `${fontSize}px fc-icon`;
+  const metrics = ctx.measureText(glyph);
+  const dx =
+    (metrics.actualBoundingBoxLeft - metrics.actualBoundingBoxRight) / 2;
+  const dy =
+    (metrics.actualBoundingBoxAscent - metrics.actualBoundingBoxDescent) / 2;
+  ctx.fillText(glyph, cx + dx, cy + dy);
+}
+
 export function makeIconTexture(index: number, renderSize = 128): IconTexture {
   const [primary, accent, paper] = PALETTES[index % PALETTES.length];
   const badge = String.fromCharCode(BADGE_START + (index % BADGE_COUNT));
@@ -43,7 +59,7 @@ export function makeIconTexture(index: number, renderSize = 128): IconTexture {
 
   const x = pad;
   const y = pad;
-  const radius = renderSize * 0.18;
+  const radius = renderSize * 0.16;
   const center = pad + renderSize / 2;
 
   // Source: lovefc/china_school_badge, Apache-2.0. The font itself is kept in public/fonts.
@@ -52,31 +68,33 @@ export function makeIconTexture(index: number, renderSize = 128): IconTexture {
   ctx.shadowBlur = renderSize * 0.16;
   ctx.shadowOffsetY = renderSize * 0.07;
   roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.fillStyle = primary;
+  ctx.fillStyle = paper;
   ctx.fill();
   ctx.restore();
 
   roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.fillStyle = primary;
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(center, center, renderSize * 0.4, 0, Math.PI * 2);
   ctx.fillStyle = paper;
   ctx.fill();
-  ctx.lineWidth = renderSize * 0.05;
-  ctx.strokeStyle = accent;
+
+  roundedRect(ctx, x, y, renderSize, renderSize, radius);
+  ctx.lineWidth = renderSize * 0.035;
+  ctx.strokeStyle = primary;
   ctx.stroke();
 
   ctx.fillStyle = primary;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `${renderSize * 0.72}px fc-icon`;
-  ctx.fillText(badge, center, center + renderSize * 0.015);
+  ctx.font = `${renderSize}px fc-icon`;
+  const metrics = ctx.measureText(badge);
+  const boxW = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight;
+  const boxH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+  const target = renderSize * 0.9;
+  const fontSize = renderSize * Math.min(target / (boxW || target), target / (boxH || target));
+  fillCenteredGlyph(ctx, badge, center, center, fontSize);
 
   roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.strokeStyle = "rgba(255,255,255,0.22)";
-  ctx.lineWidth = renderSize * 0.018;
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = renderSize * 0.012;
   ctx.stroke();
 
   return { canvas, ratio: full / renderSize };
