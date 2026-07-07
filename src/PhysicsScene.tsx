@@ -26,6 +26,16 @@ interface IconBody {
   orbitSpeed: number;
 }
 
+interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  size: number;
+  color: string;
+}
+
 export interface SceneDebugState {
   attracting: boolean;
   targetX: number;
@@ -74,6 +84,23 @@ function burstIcons(
       y: dy * speed * jitter + dx * speed * 0.28 * tangent + pushY - speed * 0.25,
     });
     Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.95);
+  }
+}
+
+function spawnSparks(sparks: Spark[], x: number, y: number) {
+  const colors = ["#d8ae45", "#f7df8c", "#ffffff", "#0f7a55"];
+  for (let i = 0; i < 70; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 7 + Math.random() * 18;
+    sparks.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 4,
+      life: 0.45 + Math.random() * 0.45,
+      size: 2 + Math.random() * 3,
+      color: colors[i % colors.length],
+    });
   }
 }
 
@@ -196,6 +223,7 @@ export default function PhysicsScene({
     let startupCooldown = forcedAttract ? 0 : 2.5; // 开场冷却（秒）：让初始的图标雨自然落完
     let accMs = 0; // 固定步长物理的时间累加器（与屏幕刷新率解耦）
     const target = { x: w / 2, y: h * 0.45 }; // 平滑后的聚集点
+    const sparks: Spark[] = [];
     let rafId = 0;
     let lastTime = performance.now();
 
@@ -248,6 +276,7 @@ export default function PhysicsScene({
           dirX * throwV,
           dirY * throwV
         );
+        spawnSparks(sparks, target.x, target.y);
         flingCooldown = 1.2;
         releaseCooldown = 0.2;
         attracting = false;
@@ -303,6 +332,14 @@ export default function PhysicsScene({
       accMs = Math.min(accMs + dtSec * 1000, STEP_MS * 3); // 防积压
       while (accMs >= STEP_MS - 0.01) {
         accMs -= STEP_MS;
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const spark = sparks[i];
+          spark.x += spark.vx;
+          spark.y += spark.vy;
+          spark.vy += 0.24;
+          spark.life -= SUB;
+          if (spark.life <= 0) sparks.splice(i, 1);
+        }
         for (const icon of icons) {
           const { body } = icon;
           body.frictionAir = attracting ? 0.05 + 0.04 * squeeze : 0.012;
@@ -367,6 +404,15 @@ export default function PhysicsScene({
           drawSize,
           drawSize
         );
+        ctx.restore();
+      }
+      for (const spark of sparks) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, spark.life * 2.2));
+        ctx.fillStyle = spark.color;
+        ctx.beginPath();
+        ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
     };

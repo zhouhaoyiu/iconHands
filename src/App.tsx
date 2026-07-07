@@ -29,6 +29,8 @@ export default function App() {
     facing: false,
     fist: false,
     flung: false,
+    x: 0.5,
+    y: 0.5,
   });
 
   useEffect(() => {
@@ -43,11 +45,20 @@ export default function App() {
         prev.detected === p.detected &&
         prev.facing === p.facing &&
         prev.fist === p.fist &&
-        prev.flung === flung
+        prev.flung === flung &&
+        Math.abs(prev.x - p.x) < 0.01 &&
+        Math.abs(prev.y - p.y) < 0.01
           ? prev
-          : { detected: p.detected, facing: p.facing, fist: p.fist, flung }
+          : {
+              detected: p.detected,
+              facing: p.facing,
+              fist: p.fist,
+              flung,
+              x: p.x,
+              y: p.y,
+            }
       );
-    }, 250);
+    }, 100);
     return () => clearInterval(timer);
   }, [palmRef]);
 
@@ -104,6 +115,7 @@ export default function App() {
           (palmUi.detected || showIndicator ? " show" : "") +
           (palmUi.facing || palmUi.fist ? " active" : "")
         }
+        style={{ left: `${palmUi.x * 100}%`, top: `${palmUi.y * 100}%` }}
         aria-hidden
       >
         <svg
