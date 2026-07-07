@@ -7,16 +7,113 @@ export interface IconTexture {
 const BADGE_START = 0xe001;
 const BADGE_COUNT = 0x137;
 
-const COLORS = [
+const FALLBACK_COLORS = [
   "#102f26",
   "#18324f",
-  "#5a1f2c",
-  "#233876",
+  "#6f2c3f",
   "#24524a",
-  "#6b2d1f",
-  "#203447",
-  "#4b2434",
+  "#7a4b20",
 ];
+
+// ponytail: 字体库是单色图标；这里保存当前可见前 96 所学校的主校色。
+const SCHOOL_PRIMARY_COLORS: Record<number, string> = {
+  0: "#1f6f5f", // ncu
+  1: "#8a4b2b", // jci
+  2: "#6f2c8f", // nju
+  3: "#82318e", // tsinghua
+  4: "#94070a", // pku
+  5: "#1f4f8f", // ahu
+  6: "#003f7d", // xmu
+  7: "#1d5f9f", // ujs
+  8: "#005bac", // zju
+  9: "#c00000", // scu
+  10: "#1d4f8f", // henu
+  11: "#2c6b55", // hbu
+  12: "#005bac", // neu
+  13: "#1f4f8f", // shu
+  14: "#003d79", // cqu
+  15: "#8a1f2d", // cdu
+  16: "#1f5f8f", // hubu
+  17: "#b40000", // sdu
+  18: "#1d4f8f", // sxu
+  19: "#006633", // sysu
+  20: "#003b7a", // tju
+  21: "#7a1e55", // ynu
+  22: "#b21f2d", // hnu
+  23: "#1f5f9f", // qhu
+  24: "#236b42", // gzu
+  25: "#8a1f2d", // utibet
+  26: "#1f4f8f", // lzu
+  27: "#1f5f9f", // imu
+  28: "#1f5f8f", // xju
+  29: "#005bac", // fzu
+  30: "#005bac", // jlu
+  31: "#003f7d", // hit
+  32: "#1f4f8f", // whu
+  33: "#236b42", // nxu
+  34: "#b01e23", // sjtu
+  35: "#0055a2", // fudan
+  36: "#b21f2d", // ustc
+  37: "#4b2c83", // seu
+  38: "#003d7c", // xjtu
+  39: "#1f4f8f", // snnu
+  40: "#005a9c", // cumt
+  41: "#8c1515", // ruc
+  42: "#1f6b3a", // cau
+  43: "#8a1f2d", // cuc
+  44: "#8a1538", // cupl
+  45: "#1f4f8f", // cufe
+  46: "#8a1f2d", // muc
+  47: "#005bac", // tongji
+  48: "#1f4f8f", // bnu
+  49: "#1f5f9f", // suda
+  50: "#005bac", // buaa
+  51: "#005bac", // dlut
+  52: "#8a1f2d", // bit
+  53: "#1f4f8f", // nwpu
+  54: "#8a1f2d", // ecnu
+  55: "#1f5f8f", // cug
+  56: "#b21f2d", // ecust
+  57: "#1f4f8f", // zzu
+  58: "#005bac", // nuaa
+  59: "#1f6b3a", // njau
+  60: "#005bac", // uestc
+  61: "#1f6b3a", // nwsuaf
+  62: "#1f6b3a", // swu
+  63: "#1f4f8f", // whut
+  64: "#8a1f2d", // njust
+  65: "#1f4f8f", // ustb
+  66: "#1f6b55", // jiangnan
+  67: "#b21f2d", // buct
+  68: "#1f4f8f", // ccnu
+  69: "#1f6b3a", // hzau
+  70: "#1f4f8f", // njnu
+  71: "#1f4f8f", // xidian
+  72: "#1f5f9f", // hhu
+  73: "#8a1f2d", // jnu
+  74: "#8a1f2d", // bjtu
+  75: "#1f4f8f", // ncepu
+  76: "#1f4f8f", // nenu
+  77: "#1f5f9f", // zjut
+  78: "#1f5f8f", // yzu
+  79: "#1f5f8f", // ccmu
+  80: "#1f4f8f", // scnu
+  81: "#1f4f8f", // hfut
+  82: "#8a1f2d", // njtech
+  83: "#8a1f2d", // nwu
+  84: "#1f5f8f", // usst
+  85: "#7a4b20", // dhu
+  86: "#1f4f8f", // bupt
+  87: "#1f5f8f", // upc
+  88: "#1f5f8f", // cup
+  89: "#1f5f8f", // nuist
+  90: "#1f6b3a", // scau
+  91: "#1f5f9f", // nbu
+  92: "#8a1f2d", // zuel
+  93: "#1f6b3a", // bjfu
+  94: "#1f5f8f", // cmu
+  95: "#1f5f8f", // zjnu
+};
 
 function fillCenteredGlyph(
   ctx: CanvasRenderingContext2D,
@@ -35,8 +132,11 @@ function fillCenteredGlyph(
 }
 
 export function makeIconTexture(index: number, renderSize = 128): IconTexture {
-  const primary = COLORS[index % COLORS.length];
-  const badge = String.fromCharCode(BADGE_START + (index % BADGE_COUNT));
+  const badgeIndex = index % BADGE_COUNT;
+  const primary =
+    SCHOOL_PRIMARY_COLORS[badgeIndex] ??
+    FALLBACK_COLORS[badgeIndex % FALLBACK_COLORS.length];
+  const badge = String.fromCharCode(BADGE_START + badgeIndex);
 
   const pad = renderSize * 0.28;
   const full = renderSize + pad * 2;
