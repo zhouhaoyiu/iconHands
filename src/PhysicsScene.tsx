@@ -51,7 +51,14 @@ function iconCountForWidth(width: number) {
   return width < 640 ? MOBILE_ICON_COUNT : DESKTOP_ICON_COUNT;
 }
 
-function burstIcons(icons: IconBody[], x: number, y: number, speed: number) {
+function burstIcons(
+  icons: IconBody[],
+  x: number,
+  y: number,
+  speed: number,
+  pushX = 0,
+  pushY = 0
+) {
   for (const icon of icons) {
     const { body } = icon;
     body.collisionFilter.group = 0;
@@ -63,8 +70,8 @@ function burstIcons(icons: IconBody[], x: number, y: number, speed: number) {
     const tangent = Math.random() < 0.5 ? -1 : 1;
     const jitter = 0.75 + Math.random() * 0.65;
     Matter.Body.setVelocity(body, {
-      x: dx * speed * jitter + -dy * speed * 0.28 * tangent,
-      y: dy * speed * jitter + dx * speed * 0.28 * tangent - speed * 0.25,
+      x: dx * speed * jitter + -dy * speed * 0.28 * tangent + pushX,
+      y: dy * speed * jitter + dx * speed * 0.28 * tangent + pushY - speed * 0.25,
     });
     Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.95);
   }
@@ -181,6 +188,7 @@ export default function PhysicsScene({
     let prevRawX = 0;
     let prevRawY = 0;
     let prevHandPresent = false;
+    let prevPointerActive = pointer.active;
     let palmVelX = 0;
     let palmVelY = 0;
     let fistRecent = 0; // 松手判定窗口（秒）
@@ -199,11 +207,10 @@ export default function PhysicsScene({
       const palm = palmRef.current;
       const fistNow = palm.detected && palm.fist;
       const handPresent =
-        (palm.detected && (palm.facing || palm.debug.open || palm.fist)) ||
-        pointer.active;
+        (palm.detected && (palm.facing || palm.fist)) || pointer.active;
       const rawX = (pointer.active ? pointer.x : palm.x) * w;
       const rawY = (pointer.active ? pointer.y : palm.y) * h;
-      const wasHandPresent = prevHandPresent;
+      const pointerReleased = prevPointerActive && !pointer.active;
 
       // ---- 手掌速度跟踪（px/s，平滑） ----
       if (handPresent && prevHandPresent && dtSec > 0) {
@@ -222,31 +229,32 @@ export default function PhysicsScene({
       flingCooldown = Math.max(0, flingCooldown - dtSec);
       releaseCooldown = Math.max(0, releaseCooldown - dtSec);
 
-      // ---- 抛出：只有"握住 → 快速挥动中松开"才抛，模拟真实投掷 ----
+      // ---- 抛出：按 hwang 原逻辑，握住/吸住后松开才散开 ----
       const throwSpeed = Math.max(w, h) * 0.9;
+      const releasedGrip =
+        attracting && fistRecent > 0 && !fistNow && squeeze > 0.35;
       if (
-        attracting &&
-        fistRecent > 0 &&
-        !fistNow &&
-        squeeze > 0.35 &&
-        palmSpeed > throwSpeed
+        (releasedGrip || (attracting && pointerReleased)) &&
+        flingCooldown === 0
       ) {
-        const dirX = palmVelX / palmSpeed;
-        const dirY = palmVelY / palmSpeed;
-        const throwV = Math.min((palmSpeed / 60) * 1.15, 48);
-        for (const icon of icons) {
-          const jitter = 0.75 + Math.random() * 0.5;
-          Matter.Body.setVelocity(icon.body, {
-            x: dirX * throwV * jitter + (Math.random() - 0.5) * 6,
-            y: dirY * throwV * jitter + (Math.random() - 0.5) * 6,
-          });
-          Matter.Body.setAngularVelocity(icon.body, (Math.random() - 0.5) * 0.6);
-        }
-        flingCooldown = 1.5; // 冷却 1.5s：飞出去的图标不会被立刻拉回
+        const directed = palmSpeed > throwSpeed;
+        const dirX = directed ? palmVelX / palmSpeed : 0;
+        const dirY = directed ? palmVelY / palmSpeed : 0;
+        const throwV = directed ? Math.min((palmSpeed / 60) * 1.15, 48) : 0;
+        burstIcons(
+          icons,
+          target.x,
+          target.y,
+          RELEASE_BURST_SPEED,
+          dirX * throwV,
+          dirY * throwV
+        );
+        flingCooldown = 1.2;
+        releaseCooldown = 0.2;
         attracting = false;
         facingTime = 0;
         fistRecent = 0;
-        squeeze = 0; // 立即恢复图标间碰撞，团块在飞行中自然散开
+        squeeze = 0;
       }
       fistRecent = fistNow ? 0.13 : Math.max(0, fistRecent - dtSec);
 
@@ -264,21 +272,17 @@ export default function PhysicsScene({
       }
       // 持续 0.07s 检测到才开始聚集，丢失 0.23s 才落下，避免闪烁
       if (!attracting && facingTime >= 0.07) attracting = true;
-      if (attracting && wasHandPresent && !handPresent) {
-        attracting = false;
-        squeeze = 0;
-        burstIcons(icons, target.x, target.y, RELEASE_BURST_SPEED);
-        releaseCooldown = 0.25;
-      } else if (attracting && lostTime >= 0.23) {
+      if (attracting && lostTime >= 0.23) {
         attracting = false;
         releaseCooldown = 0.25;
       }
 
-      if (handPresent) {
-        const follow = attracting ? 0.34 + 0.18 * squeeze : 0.42;
+      if (attracting) {
+        const follow = 0.2 + 0.18 * squeeze;
         target.x += (rawX - target.x) * follow;
         target.y += (rawY - target.y) * follow;
       }
+      prevPointerActive = pointer.active;
 
       // 握拳 → 挤压系数渐变到 1：聚集半径收紧、吸引力增强、图标间可堆叠
       squeeze += ((attracting && fistNow ? 1 : 0) - squeeze) * 0.08;
