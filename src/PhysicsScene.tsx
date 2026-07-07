@@ -188,7 +188,6 @@ export default function PhysicsScene({
     let prevRawX = 0;
     let prevRawY = 0;
     let prevHandPresent = false;
-    let prevPointerActive = pointer.active;
     let palmVelX = 0;
     let palmVelY = 0;
     let fistRecent = 0; // 松手判定窗口（秒）
@@ -211,7 +210,6 @@ export default function PhysicsScene({
         pointer.active;
       const rawX = (pointer.active ? pointer.x : palm.x) * w;
       const rawY = (pointer.active ? pointer.y : palm.y) * h;
-      const pointerReleased = prevPointerActive && !pointer.active;
 
       // ---- 手掌速度跟踪（px/s，平滑） ----
       if (handPresent && prevHandPresent && dtSec > 0) {
@@ -233,11 +231,13 @@ export default function PhysicsScene({
       // ---- 抛出：按 hwang 原逻辑，握住/吸住后松开才散开 ----
       const throwSpeed = Math.max(w, h) * 0.9;
       const releasedGrip =
-        attracting && fistRecent > 0 && !fistNow && squeeze > 0.35;
-      if (
-        (releasedGrip || (attracting && pointerReleased)) &&
-        flingCooldown === 0
-      ) {
+        attracting &&
+        palm.detected &&
+        palm.debug.open &&
+        fistRecent > 0 &&
+        !fistNow &&
+        squeeze > 0.35;
+      if (releasedGrip && flingCooldown === 0) {
         const directed = palmSpeed > throwSpeed;
         const dirX = directed ? palmVelX / palmSpeed : 0;
         const dirY = directed ? palmVelY / palmSpeed : 0;
@@ -283,7 +283,6 @@ export default function PhysicsScene({
         target.x += (rawX - target.x) * follow;
         target.y += (rawY - target.y) * follow;
       }
-      prevPointerActive = pointer.active;
 
       // 握拳 → 挤压系数渐变到 1：聚集半径收紧、吸引力增强、图标间可堆叠
       squeeze += ((attracting && fistNow ? 1 : 0) - squeeze) * 0.08;
