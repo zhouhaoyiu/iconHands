@@ -2,6 +2,8 @@
 
 一个手势驱动的高校校徽互动墙。浏览器用摄像头识别手掌，校徽会跟随掌心聚集、握拳成团，并在明确张手释放时散开。
 
+本项目 fork 并改造自 hwangdev97/iconHands，保留对原作者交互创意的致敬。
+
 线上地址：https://icon-hands.yellowplus.workers.dev
 
 ## 功能
@@ -62,5 +64,6 @@ npx wrangler deploy
 
 ## 致谢
 
+- 原项目与手势交互创意：hwangdev97/iconHands
 - 物理漂浮效果参考 IconBreeze：https://github.com/yellowplushq/IconBreeze
 - 高校校徽字体图标来自 lovefc/china_school_badge
