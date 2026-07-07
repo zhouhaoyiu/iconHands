@@ -3,8 +3,8 @@ import Matter from "matter-js";
 import { makeIconTexture, type IconTexture } from "./iconTextures";
 import type { PalmSnapshot } from "./useHandTracking";
 
-const DESKTOP_ICON_COUNT = 84;
-const MOBILE_ICON_COUNT = 56;
+const DESKTOP_ICON_COUNT = 72;
+const MOBILE_ICON_COUNT = 44;
 const MIN_SIZE = 38;
 const MAX_SIZE = 68;
 
@@ -14,6 +14,7 @@ const SPRING_K = 2.6e-6;
 const SWIRL_K = 3.2e-4;
 /** 聚集时的最大速度（px/frame） */
 const MAX_ATTRACT_SPEED = 26;
+const RELEASE_BURST_SPEED = 18;
 
 interface IconBody {
   body: Matter.Body;
@@ -50,6 +51,24 @@ function iconCountForWidth(width: number) {
   return width < 640 ? MOBILE_ICON_COUNT : DESKTOP_ICON_COUNT;
 }
 
+function burstIcons(icons: IconBody[], x: number, y: number, speed: number) {
+  for (const icon of icons) {
+    const { body } = icon;
+    body.collisionFilter.group = 0;
+    let dx = body.position.x - x;
+    let dy = body.position.y - y;
+    const d = Math.hypot(dx, dy) || 1;
+    dx /= d;
+    dy /= d;
+    const jitter = 0.65 + Math.random() * 0.7;
+    Matter.Body.setVelocity(body, {
+      x: dx * speed * jitter + (Math.random() - 0.5) * 7,
+      y: dy * speed * jitter - Math.random() * 7,
+    });
+    Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.55);
+  }
+}
+
 export default function PhysicsScene({
   palmRef,
   sceneStateRef,
@@ -63,8 +82,8 @@ export default function PhysicsScene({
 
     const engine = Matter.Engine.create();
     engine.gravity.y = 1;
-    engine.positionIterations = 8;
-    engine.velocityIterations = 6;
+    engine.positionIterations = 6;
+    engine.velocityIterations = 4;
 
     let w = window.innerWidth;
     let h = window.innerHeight;
@@ -98,7 +117,7 @@ export default function PhysicsScene({
       const icon: IconBody = {
         body,
         size,
-        texture: makeIconTexture(i, 128),
+        texture: makeIconTexture(i, 96),
         orbitRadius: 30 + Math.random() * Math.min(w, h) * 0.18,
         orbitAngle: Math.random() * Math.PI * 2,
         orbitSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.5),
@@ -141,7 +160,7 @@ export default function PhysicsScene({
     const resize = () => {
       w = window.innerWidth;
       h = window.innerHeight;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -244,6 +263,8 @@ export default function PhysicsScene({
       if (!attracting && facingTime >= 0.07) attracting = true;
       if (attracting && lostTime >= 0.23) {
         attracting = false;
+        squeeze = 0;
+        burstIcons(icons, target.x, target.y, RELEASE_BURST_SPEED);
         releaseCooldown = 0.5; // 松手落下要有承诺感，0.5s 内不重新吸附
       }
 

@@ -66,6 +66,13 @@ export default function DebugPanel({
   // 骨架叠加：每帧绘制（镜像坐标，与视频的 scaleX(-1) 对齐）
   useEffect(() => {
     if (!open) return;
+    if (status !== "tracking") {
+      const canvas = canvasRef.current;
+      canvas
+        ?.getContext("2d")
+        ?.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
     let rafId = 0;
     let attached: HTMLVideoElement | null = null;
 
@@ -122,7 +129,7 @@ export default function DebugPanel({
     };
     draw();
     return () => cancelAnimationFrame(rafId);
-  }, [open, palmRef, videoRef]);
+  }, [open, palmRef, status, videoRef]);
 
   // 文本信息低频刷新
   useEffect(() => {

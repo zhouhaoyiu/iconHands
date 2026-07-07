@@ -36,7 +36,7 @@ npx wrangler deploy
 
 | 部分 | 实现 |
 | --- | --- |
-| 手掌检测 | [@mediapipe/tasks-vision](https://www.npmjs.com/package/@mediapipe/tasks-vision) HandLandmarker（WASM/GPU，浏览器本地推理；请求 60fps 摄像头输入） |
+| 手掌检测 | [@mediapipe/tasks-vision](https://www.npmjs.com/package/@mediapipe/tasks-vision) HandLandmarker（WASM/GPU，浏览器本地推理；请求 1280×720 / 60fps 摄像头输入） |
 | 掌心朝向 | 食指根/小指根相对手腕的叉积符号 + 左右手标签；张开程度用指尖-手腕距离判断 |
 | 物理 | [matter.js](https://brm.io/matter-js/)：重力、碰撞堆叠、弹性；聚集时关闭重力，用弹簧力 + 切向环绕力 + 空气阻尼 |
 | 图标 | Canvas 自绘虚构大学校徽风格徽章，圆角卡片 + 印章图形 + 烘焙阴影 |

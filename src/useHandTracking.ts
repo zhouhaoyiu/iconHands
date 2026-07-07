@@ -11,6 +11,14 @@ const WASM_URL =
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
+async function loadRuntime() {
+  const { FilesetResolver, HandLandmarker } = await import(
+    "@mediapipe/tasks-vision"
+  );
+  const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+  return { HandLandmarker, vision };
+}
+
 export type TrackingStatus =
   | "loading"
   | "camera-request"
@@ -162,11 +170,15 @@ export function useHandTracking() {
 
     async function init() {
       setStatus("camera-request");
+      // ponytail: preload runtime during the permission prompt; model creation still waits for camera access.
+      const runtimePromise = loadRuntime()
+        .then((runtime) => ({ runtime, error: null }))
+        .catch((error: unknown) => ({ runtime: null, error }));
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
             frameRate: { ideal: 60, max: 60 },
             facingMode: "user",
           },
@@ -183,18 +195,19 @@ export function useHandTracking() {
 
       setStatus("loading");
       try {
-        const { FilesetResolver, HandLandmarker } = await import(
-          "@mediapipe/tasks-vision"
+        const { runtime, error } = await runtimePromise;
+        if (error || !runtime) throw error;
+        landmarker = await runtime.HandLandmarker.createFromOptions(
+          runtime.vision,
+          {
+            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            runningMode: "VIDEO",
+            numHands: 1,
+            minHandDetectionConfidence: 0.5,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          }
         );
-        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
-        landmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
-          runningMode: "VIDEO",
-          numHands: 1,
-          minHandDetectionConfidence: 0.5,
-          minHandPresenceConfidence: 0.5,
-          minTrackingConfidence: 0.5,
-        });
       } catch (err) {
         console.error("HandLandmarker init failed:", err);
         stream?.getTracks().forEach((t) => t.stop());
