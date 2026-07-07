@@ -1,11 +1,19 @@
-# Campus Seals Hands
+# 掌心校徽
 
-参考 [IconBreeze](https://github.com/yellowplushq/IconBreeze) 的圆角矩形漂浮效果做的 Web 版：
-用摄像头检测手掌，**掌心面向屏幕时高校校徽徽章向手掌聚集，手掌消失时徽章带物理效果落下**。
+一个手势驱动的高校校徽互动墙。浏览器用摄像头识别手掌，校徽会跟随掌心聚集、握拳成团，并在明确张手释放时散开。
 
-徽章使用 lovefc 的高校校徽字体图标库渲染，调试面板保留，用于查看摄像头预览、手部骨架和识别状态。
+线上地址：https://icon-hands.yellowplus.workers.dev
 
-**线上地址**：https://icon-hands.yellowplus.workers.dev
+## 功能
+
+- 掌心跟随：检测到手后，校徽根据掌心坐标移动。
+- 握拳成团：握拳时校徽收紧成球。
+- 张手释放：只有在握拳后明确张手，校徽才会散开；检测不到手不会自动炸开。
+- 双手玩法：屏幕左侧的手负责吸引和释放，屏幕右侧的手负责排斥。
+- 掌心轨迹：移动时显示轻微轨迹光带。
+- 定格反馈：张手释放时有短暂定格和散开效果。
+- 调试面板：保留摄像头预览、手部骨架、手势状态、手数、排斥和定格状态。
+- 鼠标兜底：没有摄像头或权限被拒绝时，按住鼠标也能吸引校徽。
 
 ## 运行
 
@@ -16,35 +24,43 @@ npm run dev
 
 打开 http://localhost:5173 并允许使用摄像头。
 
+调试吸引点：
+
+```text
+http://localhost:5173/?attract=0.5,0.4
+```
+
 ## 部署
 
-Cloudflare Workers 静态资源（配置见 `wrangler.jsonc`）：
+Cloudflare Workers 静态资源部署：
 
 ```bash
 npm run build
 npx wrangler deploy
 ```
 
-## 玩法
-
-- 🖐 张开手掌、掌心对着屏幕 → 校徽向手掌位置聚集悬浮（跟随手移动）
-- 把手拿开 / 握拳 / 手背对屏幕 → 校徽受重力落下，在地面弹跳、堆叠
-- 没有摄像头时，按住鼠标也能吸引校徽
-- 调试：`/?attract=0.5,0.4` 强制在指定归一化坐标聚集
-
 ## 技术
 
 | 部分 | 实现 |
 | --- | --- |
-| 手掌检测 | [@mediapipe/tasks-vision](https://www.npmjs.com/package/@mediapipe/tasks-vision) HandLandmarker（WASM/GPU，浏览器本地推理；请求 1280×720 / 60fps 摄像头输入） |
-| 掌心朝向 | 食指根/小指根相对手腕的叉积符号 + 左右手标签；张开程度用指尖-手腕距离判断 |
-| 物理 | [matter.js](https://brm.io/matter-js/)：重力、碰撞堆叠、弹性；聚集时关闭重力，用弹簧力 + 切向环绕力 + 空气阻尼 |
-| 图标 | lovefc/china_school_badge 高校校徽字体图标库（Apache-2.0），Canvas 渲染为圆角徽章卡片 |
+| 手掌检测 | `@mediapipe/tasks-vision` HandLandmarker，本地 WASM/GPU 推理，请求 1280x720 / 60fps 摄像头输入 |
+| 双手判断 | 按镜像后的屏幕 x 坐标排序；左侧手吸引，右侧手排斥 |
+| 手势判断 | 指尖到手腕距离判断张开程度；握拳后张手才触发释放 |
+| 物理 | `matter-js`，重力、碰撞、弹簧吸引、环绕力、排斥力 |
+| 校徽 | lovefc/china_school_badge 高校校徽字体图标库，Canvas 渲染为透明贴图 |
+| 配色 | 当前可见前 96 所学校使用主校色表；其余学校使用稳妥 fallback 色 |
 
-模型与 WASM 从 CDN 加载，首次打开需要联网。
+摄像头画面只在浏览器本地用于 MediaPipe 检测，不上传服务器。
 
 ## 第三方资源
 
 - 高校校徽字体图标库：lovefc/china_school_badge
 - 来源：https://github.com/lovefc/china_school_badge
-- 许可：Apache-2.0，副本见 `public/vendor/china_school_badge/LICENSE`
+- 许可：Apache-2.0
+- 许可副本：`public/vendor/china_school_badge/LICENSE`
+- 字体文件：`public/fonts/xiaohui.woff2`
+
+## 致谢
+
+- 物理漂浮效果参考 IconBreeze：https://github.com/yellowplushq/IconBreeze
+- 高校校徽字体图标来自 lovefc/china_school_badge
