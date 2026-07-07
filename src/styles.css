@@ -331,7 +331,6 @@ body {
   }
 
   .hint {
-    bottom: 8px;
-    font-size: 11px;
+    display: none;
   }
 }

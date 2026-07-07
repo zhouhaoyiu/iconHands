@@ -41,6 +41,22 @@ export interface PalmDebug {
   landmarks: Array<{ x: number; y: number }> | null;
 }
 
+export interface HandPoint {
+  /** 画面里检测到手 */
+  detected: boolean;
+  /** 手掌张开且面向屏幕 */
+  facing: boolean;
+  /** 握拳（挤压图标） */
+  fist: boolean;
+  /** 手掌张开 */
+  open: boolean;
+  /** 归一化坐标（已镜像，0-1），跟用户的直觉方向一致 */
+  x: number;
+  y: number;
+  /** MediaPipe 报告的左右手标签 */
+  label: string;
+}
+
 export interface PalmSnapshot {
   /** 画面里检测到手 */
   detected: boolean;
@@ -51,6 +67,8 @@ export interface PalmSnapshot {
   /** 归一化坐标（已镜像，0-1），跟用户的直觉方向一致 */
   x: number;
   y: number;
+  /** 当前检测到的所有手。第一只保持原单手行为；双手时物理层可取第二只做排斥。 */
+  hands: HandPoint[];
   debug: PalmDebug;
 }
 
@@ -67,19 +85,19 @@ function dist(a: NormalizedLandmark, b: NormalizedLandmark) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function analyze(result: HandLandmarkerResult): PalmSnapshot {
-  const lm = result.landmarks?.[0];
-  if (!lm || lm.length < 21) {
-    return {
-      detected: false,
-      facing: false,
-      fist: false,
-      x: 0.5,
-      y: 0.5,
-      debug: EMPTY_DEBUG,
-    };
-  }
+function emptySnapshot(): PalmSnapshot {
+  return {
+    detected: false,
+    facing: false,
+    fist: false,
+    x: 0.5,
+    y: 0.5,
+    hands: [],
+    debug: EMPTY_DEBUG,
+  };
+}
 
+function analyzeHand(lm: NormalizedLandmark[], label: string) {
   // 手掌中心：手腕 + 四个掌指关节的均值
   const centerIds = [0, 5, 9, 13, 17];
   let cx = 0;
@@ -111,21 +129,21 @@ function analyze(result: HandLandmarkerResult): PalmSnapshot {
   const v2y = lm[17].y - lm[0].y;
   const crossZ = v1x * v2y - v1y * v2x;
 
-  const handednessList =
-    (result as { handedness?: Array<Array<{ categoryName: string }>> })
-      .handedness ??
-    (result as { handednesses?: Array<Array<{ categoryName: string }>> })
-      .handednesses;
-  const label = handednessList?.[0]?.[0]?.categoryName ?? "Right";
   // 符号约定按实测校准：标签为 "Left" 时掌心朝屏幕 crossZ > 0，"Right" 时相反
   const facingCamera = label === "Left" ? crossZ > 0 : crossZ < 0;
+  const x = 1 - cx; // 镜像，让移动方向符合直觉
+  const y = cy;
 
   return {
-    detected: true,
-    facing: open && facingCamera,
-    fist: extended <= 1, // 四指几乎全收起 = 握拳
-    x: 1 - cx, // 镜像，让移动方向符合直觉
-    y: cy,
+    hand: {
+      detected: true,
+      facing: open && facingCamera,
+      fist: extended <= 1,
+      open,
+      x,
+      y,
+      label,
+    },
     debug: {
       label,
       crossZ,
@@ -134,6 +152,36 @@ function analyze(result: HandLandmarkerResult): PalmSnapshot {
       facingCamera,
       landmarks: lm.map((p) => ({ x: p.x, y: p.y })),
     },
+  };
+}
+
+function analyze(result: HandLandmarkerResult): PalmSnapshot {
+  const handednessList =
+    (result as { handedness?: Array<Array<{ categoryName: string }>> })
+      .handedness ??
+    (result as { handednesses?: Array<Array<{ categoryName: string }>> })
+      .handednesses;
+  const analyzed = (result.landmarks ?? [])
+    .map((lm, i) =>
+      lm.length >= 21
+        ? analyzeHand(lm, handednessList?.[i]?.[0]?.categoryName ?? "Right")
+        : null
+    )
+    .filter((hand): hand is ReturnType<typeof analyzeHand> => hand !== null);
+
+  if (analyzed.length === 0) return emptySnapshot();
+
+  analyzed.sort((a, b) => a.hand.x - b.hand.x);
+  const primary = analyzed[0];
+
+  return {
+    detected: true,
+    facing: primary.hand.facing,
+    fist: primary.hand.fist,
+    x: primary.hand.x,
+    y: primary.hand.y,
+    hands: analyzed.map((item) => item.hand),
+    debug: primary.debug,
   };
 }
 
@@ -148,6 +196,7 @@ export function useHandTracking() {
     fist: false,
     x: 0.5,
     y: 0.5,
+    hands: [],
     debug: EMPTY_DEBUG,
   });
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -202,7 +251,7 @@ export function useHandTracking() {
           {
             baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
             runningMode: "VIDEO",
-            numHands: 1,
+            numHands: 2,
             minHandDetectionConfidence: 0.5,
             minHandPresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,

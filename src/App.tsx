@@ -15,6 +15,9 @@ export default function App() {
     targetY: 0,
     palmSpeed: 0,
     flung: false,
+    handCount: 0,
+    repelling: false,
+    poster: false,
   });
   // 调试面板的控制项
   const [showIndicator, setShowIndicator] = useState(false);

@@ -151,6 +151,9 @@ export default function DebugPanel({
         { key: "palm", label: t("rowPalmPos"), value: p.detected ? `${p.x.toFixed(2)}, ${p.y.toFixed(2)}` : "—" },
         { key: "attract", label: t("rowAttracting"), value: tBool(s.attracting), good: s.attracting },
         { key: "speed", label: t("rowPalmSpeed"), value: `${s.palmSpeed} px/s` },
+        { key: "hands", label: t("rowHandCount"), value: `${s.handCount}`, good: s.handCount > 0 },
+        { key: "repel", label: t("rowRepelling"), value: tBool(s.repelling), good: s.repelling },
+        { key: "poster", label: t("rowPoster"), value: tBool(s.poster), good: s.poster },
         { key: "flung", label: t("rowFlung"), value: s.flung ? t("flungValue") : "—", good: s.flung },
       ];
       setRows((prev) => (sameRows(prev, nextRows) ? prev : nextRows));
