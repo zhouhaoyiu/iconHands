@@ -3,8 +3,8 @@ import Matter from "matter-js";
 import { makeIconTexture, type IconTexture } from "./iconTextures";
 import type { PalmSnapshot } from "./useHandTracking";
 
-const DESKTOP_ICON_COUNT = 72;
-const MOBILE_ICON_COUNT = 44;
+const DESKTOP_ICON_COUNT = 96;
+const MOBILE_ICON_COUNT = 56;
 const MIN_SIZE = 38;
 const MAX_SIZE = 68;
 

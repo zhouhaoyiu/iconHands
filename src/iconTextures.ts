@@ -13,6 +13,22 @@ const PALETTES: Array<[string, string, string]> = [
   ["#24524a", "#9fd0c4", "#f5fbf9"],
   ["#6b2d1f", "#f0b75e", "#fff8f2"],
   ["#203447", "#a8d5e2", "#f4fbff"],
+  ["#132b3a", "#d09b42", "#f8faf7"],
+  ["#4b2434", "#cfa66a", "#fff9f6"],
+  ["#153b54", "#91c7d9", "#f4fbfd"],
+  ["#2d4d32", "#d7c46a", "#fbfbef"],
+  ["#412c5f", "#c7b7e8", "#faf8ff"],
+  ["#50311f", "#e7c08a", "#fff8ed"],
+  ["#0f4b5a", "#9ed3c8", "#f4fbfa"],
+  ["#2b395f", "#e0c45a", "#f9f8ef"],
+  ["#6a2537", "#e7b9c5", "#fff7f9"],
+  ["#1d4b40", "#d2a642", "#f7fbf7"],
+  ["#26384a", "#b6c4d8", "#f6f9fc"],
+  ["#5b3a21", "#f1c46e", "#fff8ed"],
+  ["#224a76", "#d0b05a", "#f6f9ff"],
+  ["#3c5148", "#d6d0a8", "#fbfbf3"],
+  ["#4f2d64", "#e4c36b", "#fbf7ff"],
+  ["#1b5a4f", "#a7d8ce", "#f4fbf8"],
 ];
 
 const SCHOOLS: Array<[string, string, string]> = [
@@ -24,6 +40,38 @@ const SCHOOLS: Array<[string, string, string]> = [
   ["HARBOR", "HU", "1907"],
   ["METRO", "MU", "1935"],
   ["CEDAR", "CU", "1874"],
+  ["MERIDIAN", "ME", "1902"],
+  ["NORTHRIDGE", "NR", "1898"],
+  ["LAKESIDE", "LU", "1919"],
+  ["EASTGATE", "EG", "1927"],
+  ["SILVER", "SU", "1881"],
+  ["REDWOOD", "RU", "1869"],
+  ["ALPINE", "AL", "1904"],
+  ["COASTAL", "CO", "1931"],
+  ["TERRA", "TU", "1958"],
+  ["UNITY", "UN", "1921"],
+  ["SKYLINE", "SK", "1972"],
+  ["GRAND", "GU", "1886"],
+  ["WESTFIELD", "WU", "1916"],
+  ["BAYVIEW", "BV", "1948"],
+  ["HIGHLAND", "HI", "1879"],
+  ["RIDGE", "RI", "1938"],
+  ["FOREST", "FO", "1895"],
+  ["STONE", "ST", "1909"],
+  ["GATEWAY", "GW", "1961"],
+  ["PIONEER", "PI", "1883"],
+  ["ORCHARD", "OR", "1924"],
+  ["MARINER", "MA", "1901"],
+  ["ATLAS", "AT", "1952"],
+  ["LYCEUM", "LY", "1871"],
+  ["PRAIRIE", "PR", "1933"],
+  ["CANYON", "CA", "1968"],
+  ["BROOK", "BR", "1890"],
+  ["CRESCENT", "CR", "1915"],
+  ["NEWTON", "NW", "1942"],
+  ["KINGSTON", "KG", "1889"],
+  ["ROSEDALE", "RD", "1929"],
+  ["WINDWARD", "WI", "1976"],
 ];
 
 const MOTIFS = [
@@ -35,6 +83,18 @@ const MOTIFS = [
   "wave",
   "mountain",
   "compass",
+  "leaf",
+  "gear",
+  "scale",
+  "ship",
+  "scope",
+  "bridge",
+  "lyre",
+  "rocket",
+  "sun",
+  "tower",
+  "seed",
+  "shield",
 ];
 
 function fitText(
@@ -152,6 +212,143 @@ function drawMotif(
     ctx.lineTo(cx + size * 0.08, cy + size * 0.06);
     ctx.lineTo(cx + size * 0.24, cy - size * 0.22);
     ctx.lineTo(cx + size * 0.5, cy + size * 0.42);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (motif === "leaf") {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, size * 0.28, size * 0.48, Math.PI / 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.24, cy + size * 0.32);
+    ctx.lineTo(cx + size * 0.28, cy - size * 0.28);
+    ctx.stroke();
+  } else if (motif === "gear") {
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.moveTo(cx + Math.cos(a) * size * 0.36, cy + Math.sin(a) * size * 0.36);
+      ctx.lineTo(cx + Math.cos(a) * size * 0.5, cy + Math.sin(a) * size * 0.5);
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (motif === "scale") {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size * 0.42);
+    ctx.lineTo(cx, cy + size * 0.34);
+    ctx.moveTo(cx - size * 0.34, cy - size * 0.2);
+    ctx.lineTo(cx + size * 0.34, cy - size * 0.2);
+    ctx.moveTo(cx - size * 0.34, cy - size * 0.2);
+    ctx.lineTo(cx - size * 0.46, cy + size * 0.12);
+    ctx.lineTo(cx - size * 0.22, cy + size * 0.12);
+    ctx.lineTo(cx - size * 0.34, cy - size * 0.2);
+    ctx.moveTo(cx + size * 0.34, cy - size * 0.2);
+    ctx.lineTo(cx + size * 0.46, cy + size * 0.12);
+    ctx.lineTo(cx + size * 0.22, cy + size * 0.12);
+    ctx.lineTo(cx + size * 0.34, cy - size * 0.2);
+    ctx.moveTo(cx - size * 0.22, cy + size * 0.36);
+    ctx.lineTo(cx + size * 0.22, cy + size * 0.36);
+    ctx.stroke();
+  } else if (motif === "ship") {
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.48, cy + size * 0.12);
+    ctx.lineTo(cx + size * 0.42, cy + size * 0.12);
+    ctx.lineTo(cx + size * 0.22, cy + size * 0.34);
+    ctx.lineTo(cx - size * 0.32, cy + size * 0.34);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.06, cy + size * 0.1);
+    ctx.lineTo(cx - size * 0.06, cy - size * 0.42);
+    ctx.lineTo(cx + size * 0.28, cy - size * 0.02);
+    ctx.closePath();
+    ctx.stroke();
+  } else if (motif === "scope") {
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.2, cy + size * 0.34);
+    ctx.lineTo(cx + size * 0.3, cy - size * 0.34);
+    ctx.moveTo(cx + size * 0.2, cy - size * 0.42);
+    ctx.lineTo(cx + size * 0.44, cy - size * 0.24);
+    ctx.moveTo(cx - size * 0.32, cy + size * 0.36);
+    ctx.lineTo(cx + size * 0.28, cy + size * 0.36);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(cx + size * 0.34, cy - size * 0.32, size * 0.13, size * 0.2, -0.9, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (motif === "bridge") {
+    ctx.beginPath();
+    ctx.arc(cx, cy + size * 0.28, size * 0.42, Math.PI, 0);
+    ctx.moveTo(cx - size * 0.5, cy + size * 0.28);
+    ctx.lineTo(cx + size * 0.5, cy + size * 0.28);
+    for (const dx of [-0.32, -0.12, 0.12, 0.32]) {
+      ctx.moveTo(cx + size * dx, cy + size * 0.06);
+      ctx.lineTo(cx + size * dx, cy + size * 0.38);
+    }
+    ctx.stroke();
+  } else if (motif === "lyre") {
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.36, cy - size * 0.38);
+    ctx.bezierCurveTo(cx - size * 0.5, cy, cx - size * 0.24, cy + size * 0.38, cx, cy + size * 0.3);
+    ctx.bezierCurveTo(cx + size * 0.24, cy + size * 0.38, cx + size * 0.5, cy, cx + size * 0.36, cy - size * 0.38);
+    ctx.moveTo(cx - size * 0.28, cy - size * 0.22);
+    ctx.lineTo(cx + size * 0.28, cy - size * 0.22);
+    for (const dx of [-0.18, -0.06, 0.06, 0.18]) {
+      ctx.moveTo(cx + size * dx, cy - size * 0.22);
+      ctx.lineTo(cx + size * dx, cy + size * 0.24);
+    }
+    ctx.stroke();
+  } else if (motif === "rocket") {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size * 0.48);
+    ctx.bezierCurveTo(cx - size * 0.24, cy - size * 0.22, cx - size * 0.22, cy + size * 0.18, cx, cy + size * 0.42);
+    ctx.bezierCurveTo(cx + size * 0.22, cy + size * 0.18, cx + size * 0.24, cy - size * 0.22, cx, cy - size * 0.48);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy - size * 0.12, size * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (motif === "sun") {
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.22, 0, Math.PI * 2);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      ctx.moveTo(cx + Math.cos(a) * size * 0.32, cy + Math.sin(a) * size * 0.32);
+      ctx.lineTo(cx + Math.cos(a) * size * 0.48, cy + Math.sin(a) * size * 0.48);
+    }
+    ctx.stroke();
+  } else if (motif === "tower") {
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.26, cy + size * 0.42);
+    ctx.lineTo(cx - size * 0.16, cy - size * 0.32);
+    ctx.lineTo(cx, cy - size * 0.5);
+    ctx.lineTo(cx + size * 0.16, cy - size * 0.32);
+    ctx.lineTo(cx + size * 0.26, cy + size * 0.42);
+    ctx.moveTo(cx - size * 0.24, cy + size * 0.16);
+    ctx.lineTo(cx + size * 0.24, cy + size * 0.16);
+    ctx.moveTo(cx - size * 0.18, cy - size * 0.12);
+    ctx.lineTo(cx + size * 0.18, cy - size * 0.12);
+    ctx.stroke();
+  } else if (motif === "seed") {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 0.42);
+    ctx.lineTo(cx, cy - size * 0.34);
+    ctx.moveTo(cx, cy - size * 0.06);
+    ctx.bezierCurveTo(cx - size * 0.34, cy - size * 0.3, cx - size * 0.48, cy + size * 0.04, cx, cy + size * 0.1);
+    ctx.moveTo(cx, cy - size * 0.16);
+    ctx.bezierCurveTo(cx + size * 0.34, cy - size * 0.4, cx + size * 0.48, cy - size * 0.02, cx, cy + size * 0.04);
+    ctx.stroke();
+  } else if (motif === "shield") {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size * 0.46);
+    ctx.lineTo(cx + size * 0.4, cy - size * 0.26);
+    ctx.lineTo(cx + size * 0.32, cy + size * 0.2);
+    ctx.lineTo(cx, cy + size * 0.48);
+    ctx.lineTo(cx - size * 0.32, cy + size * 0.2);
+    ctx.lineTo(cx - size * 0.4, cy - size * 0.26);
     ctx.closePath();
     ctx.stroke();
   } else {
