@@ -4,7 +4,7 @@
 
 本项目 fork 并改造自 hwangdev97/iconHands，保留对原作者交互创意的致敬。
 
-线上地址：https://icon-hands.yellowplus.workers.dev
+线上地址：待部署到你的域名后填写。
 
 ## 功能
 
