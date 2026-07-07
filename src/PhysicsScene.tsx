@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Matter from "matter-js";
 import { makeIconTexture, type IconTexture } from "./iconTextures";
 import type { PalmSnapshot } from "./useHandTracking";
@@ -147,8 +147,24 @@ export default function PhysicsScene({
   controlsRef,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fontReady, setFontReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const fonts = document.fonts;
+    const ready = fonts ? fonts.load("96px fc-icon") : Promise.resolve();
+    ready
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setFontReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fontReady) return;
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
 
@@ -601,7 +617,7 @@ export default function PhysicsScene({
       Matter.Engine.clear(engine);
       Matter.Composite.clear(engine.world, false);
     };
-  }, [palmRef, sceneStateRef, controlsRef]);
+  }, [fontReady, palmRef, sceneStateRef, controlsRef]);
 
   return <canvas ref={canvasRef} className="scene-canvas" />;
 }
