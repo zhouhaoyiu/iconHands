@@ -14,7 +14,7 @@ const zh = {
   hudOpenPrompt: "张开手掌，掌心面向屏幕",
   hudShowPalm: "将手掌对准摄像头，校徽会向掌心聚集",
   hint: "手掌移开后，校徽会重新落回地面",
-  pageTitle: "Campus Seals · 手掌吸引校徽",
+  pageTitle: "掌心校徽 · 手势驱动的高校校徽互动墙",
 
   // 调试面板
   debugTitle: "手掌检测调试",
@@ -59,7 +59,7 @@ const en: typeof zh = {
   hudOpenPrompt: "Open your hand, palm facing the screen",
   hudShowPalm: "Show your palm to the camera to attract campus seals",
   hint: "Move your hand away and the seals fall back down",
-  pageTitle: "Campus Seals · Palm-attracted emblems",
+  pageTitle: "Palm Badges · Gesture-driven university seals",
 
   // Debug panel
   debugTitle: "Hand tracking debug",
