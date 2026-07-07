@@ -14,7 +14,7 @@ const SPRING_K = 2.6e-6;
 const SWIRL_K = 3.2e-4;
 /** 聚集时的最大速度（px/frame） */
 const MAX_ATTRACT_SPEED = 26;
-const RELEASE_BURST_SPEED = 18;
+const RELEASE_BURST_SPEED = 34;
 
 interface IconBody {
   body: Matter.Body;
@@ -60,12 +60,13 @@ function burstIcons(icons: IconBody[], x: number, y: number, speed: number) {
     const d = Math.hypot(dx, dy) || 1;
     dx /= d;
     dy /= d;
-    const jitter = 0.65 + Math.random() * 0.7;
+    const tangent = Math.random() < 0.5 ? -1 : 1;
+    const jitter = 0.75 + Math.random() * 0.65;
     Matter.Body.setVelocity(body, {
-      x: dx * speed * jitter + (Math.random() - 0.5) * 7,
-      y: dy * speed * jitter - Math.random() * 7,
+      x: dx * speed * jitter + -dy * speed * 0.28 * tangent,
+      y: dy * speed * jitter + dx * speed * 0.28 * tangent - speed * 0.25,
     });
-    Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.55);
+    Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.95);
   }
 }
 
@@ -198,9 +199,11 @@ export default function PhysicsScene({
       const palm = palmRef.current;
       const fistNow = palm.detected && palm.fist;
       const handPresent =
-        (palm.detected && (palm.facing || palm.fist)) || pointer.active;
+        (palm.detected && (palm.facing || palm.debug.open || palm.fist)) ||
+        pointer.active;
       const rawX = (pointer.active ? pointer.x : palm.x) * w;
       const rawY = (pointer.active ? pointer.y : palm.y) * h;
+      const wasHandPresent = prevHandPresent;
 
       // ---- 手掌速度跟踪（px/s，平滑） ----
       if (handPresent && prevHandPresent && dtSec > 0) {
@@ -261,16 +264,18 @@ export default function PhysicsScene({
       }
       // 持续 0.07s 检测到才开始聚集，丢失 0.23s 才落下，避免闪烁
       if (!attracting && facingTime >= 0.07) attracting = true;
-      if (attracting && lostTime >= 0.23) {
+      if (attracting && wasHandPresent && !handPresent) {
         attracting = false;
         squeeze = 0;
         burstIcons(icons, target.x, target.y, RELEASE_BURST_SPEED);
-        releaseCooldown = 0.5; // 松手落下要有承诺感，0.5s 内不重新吸附
+        releaseCooldown = 0.25;
+      } else if (attracting && lostTime >= 0.23) {
+        attracting = false;
+        releaseCooldown = 0.25;
       }
 
-      if (attracting) {
-        // 握拳时跟手更紧，有"抓在手里"的感觉
-        const follow = 0.16 + 0.14 * squeeze;
+      if (handPresent) {
+        const follow = attracting ? 0.34 + 0.18 * squeeze : 0.42;
         target.x += (rawX - target.x) * follow;
         target.y += (rawY - target.y) * follow;
       }
