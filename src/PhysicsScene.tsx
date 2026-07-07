@@ -207,7 +207,8 @@ export default function PhysicsScene({
       const palm = palmRef.current;
       const fistNow = palm.detected && palm.fist;
       const handPresent =
-        (palm.detected && (palm.facing || palm.fist)) || pointer.active;
+        (palm.detected && (palm.facing || palm.debug.open || palm.fist)) ||
+        pointer.active;
       const rawX = (pointer.active ? pointer.x : palm.x) * w;
       const rawY = (pointer.active ? pointer.y : palm.y) * h;
       const pointerReleased = prevPointerActive && !pointer.active;
