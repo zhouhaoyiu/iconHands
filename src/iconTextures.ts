@@ -7,28 +7,16 @@ export interface IconTexture {
 const BADGE_START = 0xe001;
 const BADGE_COUNT = 0x137;
 
-const PALETTES: Array<[string, string, string]> = [
-  ["#102f26", "#c8a24a", "#f8faf4"],
-  ["#18324f", "#d6b35a", "#f7fbff"],
-  ["#5a1f2c", "#e1b84d", "#fff7f8"],
-  ["#233876", "#b7c7e8", "#f6f8ff"],
-  ["#24524a", "#9fd0c4", "#f5fbf9"],
-  ["#6b2d1f", "#f0b75e", "#fff8f2"],
-  ["#203447", "#a8d5e2", "#f4fbff"],
-  ["#4b2434", "#cfa66a", "#fff9f6"],
+const COLORS = [
+  "#102f26",
+  "#18324f",
+  "#5a1f2c",
+  "#233876",
+  "#24524a",
+  "#6b2d1f",
+  "#203447",
+  "#4b2434",
 ];
-
-function roundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-}
 
 function fillCenteredGlyph(
   ctx: CanvasRenderingContext2D,
@@ -47,7 +35,7 @@ function fillCenteredGlyph(
 }
 
 export function makeIconTexture(index: number, renderSize = 128): IconTexture {
-  const [primary, accent, paper] = PALETTES[index % PALETTES.length];
+  const primary = COLORS[index % COLORS.length];
   const badge = String.fromCharCode(BADGE_START + (index % BADGE_COUNT));
 
   const pad = renderSize * 0.28;
@@ -57,29 +45,7 @@ export function makeIconTexture(index: number, renderSize = 128): IconTexture {
   canvas.height = full;
   const ctx = canvas.getContext("2d")!;
 
-  const x = pad;
-  const y = pad;
-  const radius = renderSize * 0.16;
   const center = pad + renderSize / 2;
-
-  // Source: lovefc/china_school_badge, Apache-2.0. The font itself is kept in public/fonts.
-  ctx.save();
-  ctx.shadowColor = "rgba(15, 23, 42, 0.26)";
-  ctx.shadowBlur = renderSize * 0.16;
-  ctx.shadowOffsetY = renderSize * 0.07;
-  roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.fillStyle = paper;
-  ctx.fill();
-  ctx.restore();
-
-  roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.fillStyle = paper;
-  ctx.fill();
-
-  roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.lineWidth = renderSize * 0.035;
-  ctx.strokeStyle = primary;
-  ctx.stroke();
 
   ctx.fillStyle = primary;
   ctx.textAlign = "center";
@@ -88,14 +54,14 @@ export function makeIconTexture(index: number, renderSize = 128): IconTexture {
   const metrics = ctx.measureText(badge);
   const boxW = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight;
   const boxH = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-  const target = renderSize * 0.9;
+  const target = renderSize * 1.02;
   const fontSize = renderSize * Math.min(target / (boxW || target), target / (boxH || target));
-  fillCenteredGlyph(ctx, badge, center, center, fontSize);
 
-  roundedRect(ctx, x, y, renderSize, renderSize, radius);
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = renderSize * 0.012;
-  ctx.stroke();
+  // Source: lovefc/china_school_badge, Apache-2.0. The font itself is kept in public/fonts.
+  ctx.shadowColor = "rgba(15, 23, 42, 0.22)";
+  ctx.shadowBlur = renderSize * 0.12;
+  ctx.shadowOffsetY = renderSize * 0.05;
+  fillCenteredGlyph(ctx, badge, center, center, fontSize);
 
   return { canvas, ratio: full / renderSize };
 }
