@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  FilesetResolver,
-  HandLandmarker,
-  type HandLandmarkerResult,
-  type NormalizedLandmark,
+import type {
+  HandLandmarker as HandLandmarkerInstance,
+  HandLandmarkerResult,
+  NormalizedLandmark,
 } from "@mediapipe/tasks-vision";
 
+const MEDIAPIPE_VERSION = "0.10.35";
 const WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+  `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
@@ -154,16 +154,39 @@ export function useHandTracking() {
     let cancelled = false;
     let rafId = 0;
     let stream: MediaStream | null = null;
-    let landmarker: HandLandmarker | null = null;
+    let landmarker: HandLandmarkerInstance | null = null;
     const video = document.createElement("video");
     video.playsInline = true;
     video.muted = true;
     videoRef.current = video;
 
     async function init() {
-      let vision;
+      setStatus("camera-request");
       try {
-        vision = await FilesetResolver.forVisionTasks(WASM_URL);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            frameRate: { ideal: 60, max: 60 },
+            facingMode: "user",
+          },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await video.play();
+      } catch (err) {
+        console.warn("Camera unavailable:", err);
+        if (!cancelled) setStatus("camera-denied");
+        return;
+      }
+      if (cancelled) return;
+
+      setStatus("loading");
+      try {
+        const { FilesetResolver, HandLandmarker } = await import(
+          "@mediapipe/tasks-vision"
+        );
+        const vision = await FilesetResolver.forVisionTasks(WASM_URL);
         landmarker = await HandLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
           runningMode: "VIDEO",
@@ -174,22 +197,10 @@ export function useHandTracking() {
         });
       } catch (err) {
         console.error("HandLandmarker init failed:", err);
+        stream?.getTracks().forEach((t) => t.stop());
+        stream = null;
+        video.srcObject = null;
         if (!cancelled) setStatus("error");
-        return;
-      }
-      if (cancelled) return;
-
-      setStatus("camera-request");
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: "user" },
-          audio: false,
-        });
-        video.srcObject = stream;
-        await video.play();
-      } catch (err) {
-        console.warn("Camera unavailable:", err);
-        if (!cancelled) setStatus("camera-denied");
         return;
       }
       if (cancelled) return;

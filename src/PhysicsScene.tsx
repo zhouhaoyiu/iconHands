@@ -1,14 +1,10 @@
 import { useEffect, useRef } from "react";
 import Matter from "matter-js";
-import {
-  makeIconTexture,
-  makeImageIconTexture,
-  type IconTexture,
-} from "./iconTextures";
+import { makeIconTexture, type IconTexture } from "./iconTextures";
 import type { PalmSnapshot } from "./useHandTracking";
-import iconManifest from "./iconManifest.json";
 
-const ICON_COUNT = 84;
+const DESKTOP_ICON_COUNT = 84;
+const MOBILE_ICON_COUNT = 56;
 const MIN_SIZE = 38;
 const MAX_SIZE = 68;
 
@@ -50,6 +46,10 @@ interface Props {
   controlsRef?: React.MutableRefObject<SceneControls>;
 }
 
+function iconCountForWidth(width: number) {
+  return width < 640 ? MOBILE_ICON_COUNT : DESKTOP_ICON_COUNT;
+}
+
 export default function PhysicsScene({
   palmRef,
   sceneStateRef,
@@ -79,7 +79,8 @@ export default function PhysicsScene({
 
     // ---- 图标刚体：圆角矩形，从屏幕上方分批落下 ----
     const icons: IconBody[] = [];
-    for (let i = 0; i < ICON_COUNT; i++) {
+    const iconCount = iconCountForWidth(w);
+    for (let i = 0; i < iconCount; i++) {
       const size = MIN_SIZE + Math.random() * (MAX_SIZE - MIN_SIZE);
       const body = Matter.Bodies.rectangle(
         40 + Math.random() * Math.max(w - 80, 80),
@@ -104,20 +105,14 @@ export default function PhysicsScene({
       };
       icons.push(icon);
       Matter.Composite.add(engine.world, body);
-
-      // 加载 icon.museum 的真实 app 图标，加载完成后替换占位贴图
-      const img = new Image();
-      img.onload = () => {
-        icon.texture = makeImageIconTexture(img, 128);
-      };
-      img.src = iconManifest[i % iconManifest.length];
     }
 
     // ---- 鼠标/触摸兜底：按住即可吸引（无摄像头时也能玩） ----
     const pointer = { active: false, x: 0.5, y: 0.5 };
     // 调试：?attract=0.5,0.4 强制在指定归一化坐标聚集
     const attractParam = new URLSearchParams(location.search).get("attract");
-    if (attractParam !== null) {
+    const forcedAttract = attractParam !== null;
+    if (forcedAttract) {
       const [px, py] = attractParam.split(",").map(Number);
       pointer.active = true;
       pointer.x = Number.isFinite(px) ? px : 0.5;
@@ -134,6 +129,7 @@ export default function PhysicsScene({
       pointer.y = e.clientY / h;
     };
     const onPointerUp = () => {
+      if (forcedAttract) return;
       pointer.active = false;
     };
     window.addEventListener("pointerdown", onPointerDown);
@@ -170,7 +166,7 @@ export default function PhysicsScene({
     let fistRecent = 0; // 松手判定窗口（秒）
     let flingCooldown = 0; // 抛出后的冷却（秒），期间不吸引
     let releaseCooldown = 0; // 正常松手落下后的短冷却（秒），让下落有承诺感
-    let startupCooldown = 2.5; // 开场冷却（秒）：让初始的图标雨自然落完
+    let startupCooldown = forcedAttract ? 0 : 2.5; // 开场冷却（秒）：让初始的图标雨自然落完
     let accMs = 0; // 固定步长物理的时间累加器（与屏幕刷新率解耦）
     const target = { x: w / 2, y: h * 0.45 }; // 平滑后的聚集点
     let rafId = 0;

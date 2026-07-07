@@ -36,6 +36,18 @@ interface Row {
   good?: boolean;
 }
 
+function sameRows(a: Row[], b: Row[]) {
+  return (
+    a.length === b.length &&
+    a.every(
+      (row, i) =>
+        row.key === b[i].key &&
+        row.value === b[i].value &&
+        row.good === b[i].good
+    )
+  );
+}
+
 export default function DebugPanel({
   palmRef,
   videoRef,
@@ -119,7 +131,7 @@ export default function DebugPanel({
       const p = palmRef.current;
       const d = p.debug;
       const s = sceneStateRef.current;
-      setRows([
+      const nextRows = [
         { key: "status", label: t("rowStatus"), value: status, good: status === "tracking" },
         { key: "detected", label: t("rowDetected"), value: tBool(p.detected), good: p.detected },
         { key: "extended", label: t("rowExtended"), value: `${d.extended} / 4`, good: d.open },
@@ -133,7 +145,8 @@ export default function DebugPanel({
         { key: "attract", label: t("rowAttracting"), value: tBool(s.attracting), good: s.attracting },
         { key: "speed", label: t("rowPalmSpeed"), value: `${s.palmSpeed} px/s` },
         { key: "flung", label: t("rowFlung"), value: s.flung ? t("flungValue") : "—", good: s.flung },
-      ]);
+      ];
+      setRows((prev) => (sameRows(prev, nextRows) ? prev : nextRows));
     }, 120);
     return () => clearInterval(timer);
   }, [open, palmRef, sceneStateRef, status]);
