@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import Matter from "matter-js";
 import { makeIconTexture, type IconTexture } from "./iconTextures";
+import {
+  createReleaseGestureState,
+  updateReleaseGesture,
+} from "./releaseGesture";
 import type { PalmSnapshot } from "./useHandTracking";
 
 const DESKTOP_ICON_COUNT = 96;
@@ -272,7 +276,7 @@ export default function PhysicsScene({
     let prevHandPresent = false;
     let palmVelX = 0;
     let palmVelY = 0;
-    let fistRecent = 0; // 松手判定窗口（秒）
+    const releaseGesture = createReleaseGestureState();
     let flingCooldown = 0; // 抛出后的冷却（秒），期间不吸引
     let releaseCooldown = 0; // 正常松手落下后的短冷却（秒），让下落有承诺感
     let startupCooldown = forcedAttract ? 0 : 2.5; // 开场冷却（秒）：让初始的图标雨自然落完
@@ -302,6 +306,7 @@ export default function PhysicsScene({
       const controlHand = pointer.active ? undefined : attractHand;
       const fistNow = Boolean(controlHand?.fist ?? (palm.detected && palm.fist));
       const controlOpen = controlHand?.open ?? palm.debug.open;
+      const controlFacing = controlHand?.facing ?? palm.facing;
       const handPresent = Boolean(pointer.active || controlHand || palm.detected);
       const rawX = (pointer.active ? pointer.x : (controlHand?.x ?? palm.x)) * w;
       const rawY = (pointer.active ? pointer.y : (controlHand?.y ?? palm.y)) * h;
@@ -339,14 +344,13 @@ export default function PhysicsScene({
 
       // ---- 抛出：按 hwang 原逻辑，握住/吸住后松开才散开 ----
       const throwSpeed = Math.max(w, h) * 0.9;
-      const releasedGrip =
-        attracting &&
-        !pointer.active &&
-        handPresent &&
-        controlOpen &&
-        fistRecent > 0 &&
-        !fistNow &&
-        squeeze > 0.35;
+      const releasedGrip = updateReleaseGesture(releaseGesture, {
+        fist: fistNow,
+        open: Boolean(controlOpen && controlFacing && !pointer.active && handPresent),
+        attracting,
+        squeeze,
+        dtSec,
+      });
       if (releasedGrip && flingCooldown === 0) {
         const directed = palmSpeed > throwSpeed;
         const dirX = directed ? palmVelX / palmSpeed : 0;
@@ -368,10 +372,8 @@ export default function PhysicsScene({
         releaseCooldown = 0.2;
         attracting = false;
         facingTime = 0;
-        fistRecent = 0;
         squeeze = 0;
       }
-      fistRecent = fistNow ? 0.13 : Math.max(0, fistRecent - dtSec);
 
       const wantAttract =
         handPresent &&

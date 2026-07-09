@@ -8,7 +8,7 @@ import { useHandTracking } from "./useHandTracking";
 import { t } from "./i18n";
 
 export default function App() {
-  const { palmRef, videoRef, status } = useHandTracking();
+  const { palmRef, videoRef, trackingStatsRef, status } = useHandTracking();
   const sceneStateRef = useRef<SceneDebugState>({
     attracting: false,
     targetX: 0,
@@ -139,6 +139,7 @@ export default function App() {
       <DebugPanel
         palmRef={palmRef}
         videoRef={videoRef}
+        trackingStatsRef={trackingStatsRef}
         sceneStateRef={sceneStateRef}
         status={status}
         showIndicator={showIndicator}

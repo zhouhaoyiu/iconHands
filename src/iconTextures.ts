@@ -15,7 +15,7 @@ const FALLBACK_COLORS = [
   "#7a4b20",
 ];
 
-// ponytail: 字体库是单色图标；这里保存当前可见前 96 所学校的主校色。
+// 字体库只提供单色字形；这里按公开校徽主视觉整理展示色，不作为学校官方 VI 色值。
 const SCHOOL_PRIMARY_COLORS: Record<number, string> = {
   0: "#1f6f5f", // ncu
   1: "#8a4b2b", // jci

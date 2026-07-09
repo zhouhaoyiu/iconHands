@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { PalmSnapshot, TrackingStatus } from "./useHandTracking";
+import type {
+  PalmSnapshot,
+  TrackingStats,
+  TrackingStatus,
+} from "./useHandTracking";
 import type { SceneDebugState } from "./PhysicsScene";
 import { t, tBool } from "./i18n";
 
@@ -19,6 +23,7 @@ const VIEW_H = 195;
 interface Props {
   palmRef: React.MutableRefObject<PalmSnapshot>;
   videoRef: React.MutableRefObject<HTMLVideoElement | null>;
+  trackingStatsRef: React.MutableRefObject<TrackingStats>;
   sceneStateRef: React.MutableRefObject<SceneDebugState>;
   status: TrackingStatus;
   /** 常显手掌指示器（方便调样式） */
@@ -51,6 +56,7 @@ function sameRows(a: Row[], b: Row[]) {
 export default function DebugPanel({
   palmRef,
   videoRef,
+  trackingStatsRef,
   sceneStateRef,
   status,
   showIndicator,
@@ -58,7 +64,9 @@ export default function DebugPanel({
   distance,
   onDistance,
 }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(
+    () => !window.matchMedia("(max-width: 640px)").matches
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const videoBoxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -138,8 +146,26 @@ export default function DebugPanel({
       const p = palmRef.current;
       const d = p.debug;
       const s = sceneStateRef.current;
+      const stats = trackingStatsRef.current;
+      const keepingUp =
+        stats.inferenceFps > 0 &&
+        (stats.sourceFps === 0 || stats.inferenceFps >= stats.sourceFps * 0.8);
       const nextRows = [
         { key: "status", label: t("rowStatus"), value: status, good: status === "tracking" },
+        {
+          key: "input",
+          label: t("rowInput"),
+          value:
+            stats.width && stats.height
+              ? `${stats.width} × ${stats.height} @ ${stats.sourceFps || "—"} fps`
+              : "—",
+        },
+        {
+          key: "fps",
+          label: t("rowInferenceFps"),
+          value: stats.inferenceFps ? `${stats.inferenceFps.toFixed(1)} fps` : "—",
+          good: keepingUp,
+        },
         { key: "detected", label: t("rowDetected"), value: tBool(p.detected), good: p.detected },
         { key: "extended", label: t("rowExtended"), value: `${d.extended} / 4`, good: d.open },
         { key: "open", label: t("rowOpen"), value: tBool(d.open), good: d.open },
@@ -159,7 +185,7 @@ export default function DebugPanel({
       setRows((prev) => (sameRows(prev, nextRows) ? prev : nextRows));
     }, 120);
     return () => clearInterval(timer);
-  }, [open, palmRef, sceneStateRef, status]);
+  }, [open, palmRef, sceneStateRef, status, trackingStatsRef]);
 
   if (!open) {
     return (

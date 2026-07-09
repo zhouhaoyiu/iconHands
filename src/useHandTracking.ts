@@ -8,8 +8,7 @@ import type {
 const MEDIAPIPE_VERSION = "0.10.35";
 const WASM_URL =
   `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MEDIAPIPE_VERSION}/wasm`;
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const MODEL_URL = "/models/hand_landmarker-float16-v1.task";
 
 async function loadRuntime() {
   const { FilesetResolver, HandLandmarker } = await import(
@@ -19,12 +18,25 @@ async function loadRuntime() {
   return { HandLandmarker, vision };
 }
 
+async function loadModel(signal: AbortSignal) {
+  const response = await fetch(MODEL_URL, { signal });
+  if (!response.ok) throw new Error(`Model request failed: ${response.status}`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
 export type TrackingStatus =
   | "loading"
   | "camera-request"
   | "tracking"
   | "camera-denied"
   | "error";
+
+export interface TrackingStats {
+  inferenceFps: number;
+  sourceFps: number;
+  width: number;
+  height: number;
+}
 
 export interface PalmDebug {
   /** MediaPipe 报告的左右手标签（未镜像画面下是反的） */
@@ -200,6 +212,12 @@ export function useHandTracking() {
     debug: EMPTY_DEBUG,
   });
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const trackingStatsRef = useRef<TrackingStats>({
+    inferenceFps: 0,
+    sourceFps: 0,
+    width: 0,
+    height: 0,
+  });
   const [status, setStatus] = useState<TrackingStatus>("loading");
 
   if (import.meta.env.DEV) {
@@ -210,8 +228,10 @@ export function useHandTracking() {
   useEffect(() => {
     let cancelled = false;
     let rafId = 0;
+    let videoFrameId = 0;
     let stream: MediaStream | null = null;
     let landmarker: HandLandmarkerInstance | null = null;
+    const modelController = new AbortController();
     const video = document.createElement("video");
     video.playsInline = true;
     video.muted = true;
@@ -219,12 +239,15 @@ export function useHandTracking() {
 
     async function init() {
       setStatus("camera-request");
-      // ponytail: preload runtime during the permission prompt; model creation still waits for camera access.
-      const runtimePromise = loadRuntime()
-        .then((runtime) => ({ runtime, error: null }))
+      const assetsPromise = Promise.all([
+        loadRuntime(),
+        loadModel(modelController.signal),
+      ])
+        .then(([runtime, model]) => ({ runtime, model, error: null }))
         .catch((error: unknown) => ({ runtime: null, error }));
+      let acquiredStream: MediaStream | null = null;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
+        acquiredStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 },
@@ -233,23 +256,50 @@ export function useHandTracking() {
           },
           audio: false,
         });
+        if (cancelled) {
+          acquiredStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        stream = acquiredStream;
         video.srcObject = stream;
         await video.play();
       } catch (err) {
+        acquiredStream?.getTracks().forEach((track) => track.stop());
+        stream = null;
+        video.srcObject = null;
+        modelController.abort();
         console.warn("Camera unavailable:", err);
         if (!cancelled) setStatus("camera-denied");
         return;
       }
-      if (cancelled) return;
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+        video.srcObject = null;
+        return;
+      }
+
+      const settings = stream.getVideoTracks()[0]?.getSettings();
+      trackingStatsRef.current = {
+        inferenceFps: 0,
+        sourceFps: settings?.frameRate ?? 0,
+        width: settings?.width ?? video.videoWidth,
+        height: settings?.height ?? video.videoHeight,
+      };
 
       setStatus("loading");
       try {
-        const { runtime, error } = await runtimePromise;
-        if (error || !runtime) throw error;
-        landmarker = await runtime.HandLandmarker.createFromOptions(
-          runtime.vision,
+        const assets = await assetsPromise;
+        if (assets.error || !assets.runtime || !("model" in assets)) {
+          throw assets.error;
+        }
+        const createdLandmarker = await assets.runtime.HandLandmarker.createFromOptions(
+          assets.runtime.vision,
           {
-            baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+            baseOptions: {
+              modelAssetBuffer: assets.model,
+              delegate: "GPU",
+            },
             runningMode: "VIDEO",
             numHands: 2,
             minHandDetectionConfidence: 0.5,
@@ -257,8 +307,13 @@ export function useHandTracking() {
             minTrackingConfidence: 0.5,
           }
         );
+        if (cancelled) {
+          createdLandmarker.close();
+          return;
+        }
+        landmarker = createdLandmarker;
       } catch (err) {
-        console.error("HandLandmarker init failed:", err);
+        if (!cancelled) console.error("HandLandmarker init failed:", err);
         stream?.getTracks().forEach((t) => t.stop());
         stream = null;
         video.srcObject = null;
@@ -269,7 +324,16 @@ export function useHandTracking() {
 
       setStatus("tracking");
       let lastVideoTime = -1;
-      const loop = () => {
+      let inferenceFrames = 0;
+      let statsStartedAt = performance.now();
+      const schedule = () => {
+        if ("requestVideoFrameCallback" in video) {
+          videoFrameId = video.requestVideoFrameCallback(loop);
+        } else {
+          rafId = requestAnimationFrame(loop);
+        }
+      };
+      const loop = (now: number) => {
         if (cancelled) return;
         if (
           landmarker &&
@@ -280,25 +344,37 @@ export function useHandTracking() {
           try {
             const result = landmarker.detectForVideo(video, performance.now());
             palmRef.current = analyze(result);
+            inferenceFrames++;
           } catch (err) {
             console.error("detectForVideo failed:", err);
           }
         }
-        rafId = requestAnimationFrame(loop);
+        const elapsed = now - statsStartedAt;
+        if (elapsed >= 1000) {
+          trackingStatsRef.current = {
+            ...trackingStatsRef.current,
+            inferenceFps: Math.round((inferenceFrames * 10000) / elapsed) / 10,
+          };
+          inferenceFrames = 0;
+          statsStartedAt = now;
+        }
+        schedule();
       };
-      loop();
+      schedule();
     }
 
     init();
 
     return () => {
       cancelled = true;
+      modelController.abort();
       cancelAnimationFrame(rafId);
+      if (videoFrameId) video.cancelVideoFrameCallback(videoFrameId);
       stream?.getTracks().forEach((t) => t.stop());
       landmarker?.close();
       if (videoRef.current === video) videoRef.current = null;
     };
   }, []);
 
-  return { palmRef, videoRef, status };
+  return { palmRef, videoRef, trackingStatsRef, status };
 }
